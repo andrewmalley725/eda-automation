@@ -3,7 +3,6 @@ class EDA:
         self.label_is_numeric = label_is_numeric
         self.label = label
         self.df = df
-        pass
 
     def bivariate_stats(self):
         from scipy import stats
