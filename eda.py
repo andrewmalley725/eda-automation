@@ -83,57 +83,7 @@ class EDA:
         final_data.drop(columns=['Abs_Value'], inplace=True)
         return final_data
 
-
-    def univariate_viz(self, df):
-        import pandas as pd
-        import matplotlib.pyplot as plt
-        import seaborn as sns
-        new_df = pd.DataFrame(columns=['Count', 'Unique', 'Data Type', 'Missing', 'Mode', 'Min', '25%', 'Median', '75%', 'Max', 'STD Dev', 'Mean', 'Skew', 'Kurt'])
-        for col in df:
-            if pd.api.types.is_numeric_dtype(df[col]):
-                f, (ax_box, ax) = plt.subplots(2, sharex=True, gridspec_kw={'height_ratios': (.15, .65)})
-                sns.set(style='ticks')
-                flierprops = dict(marker='o', markersize=4, markerfacecolor='none', linestyle='none', markeredgecolor='gray')
-                sns.boxplot(x=df[col], ax=ax_box, fliersize=4, width=.50, linewidth=1, flierprops=flierprops)
-                sns.histplot(df, x=df[col])
-                sns.despine(ax=ax)
-                sns.despine(ax=ax_box, left=True, bottom=True)
-                ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
-                ax_box.set_title(col, fontsize=14)
-                new_df.loc[col] = [df[col].count(), round(df[col].nunique(), 2), str(df[col].dtype), round(df[col].isnull().sum(), 2), df[col].mode().values[0], round(df[col].min(), 2), round(df[col].quantile(.25), 2), round(df[col].median(), 2), round(df[col].quantile(.75), 2), round(df[col].max(), 2), round(df[col].std(), 2), round(df[col].mean(), 2), round(df[col].skew(), 2), round(df[col].kurt(), 2)]
-                text = 'Count: ' + str(df[col].count()) + '\n'
-                text += 'Unique: ' + str(round(df[col].nunique(), 2)) + '\n'
-                text += 'Data Type: ' + str(df[col].dtype) + '\n'
-                text += 'Missing: ' + str(round(df[col].isnull().sum(), 2)) + '\n'
-                text += 'Mode: ' + str(df[col].mode().values[0]) + '\n'
-                text += 'Min: ' + str(round(df[col].min(), 2)) + '\n'
-                text += '25%: ' + str(round(df[col].quantile(.25), 2)) + '\n'
-                text += 'Median: ' + str(round(df[col].median(), 2)) + '\n'
-                text += '75%: ' + str(round(df[col].quantile(.75), 2)) + '\n'
-                text += 'Max: ' + str(round(df[col].max(), 2)) + '\n'
-                text += 'Std Dev: ' + str(round(df[col].std(), 2)) + '\n'
-                text += 'Mean: ' + str(round(df[col].mean(), 2)) + '\n'
-                text += 'Skew: ' + str(round(df[col].skew(), 2)) + '\n'
-                text += 'Kurt: ' + str(round(df[col].kurt(), 2)) + '\n'
-                ax.text(.9, .25, text, fontsize=10, transform=plt.gcf().transFigure)
-                plt.show()
-            else:
-                ax_count = sns.countplot(x=col, data=df, order=df[col].value_counts().index, palette=sns.color_palette('RdBu_r', df[col].nunique()))
-                sns.despine(ax=ax_count)
-                ax_count.set_title(col)
-                ax_count.set_xlabel(col)
-                ax_count.set_ylabel('')
-                ax_count.set_xticklabels(ax_count.get_xticklabels(), rotation=45)
-                new_df.loc[col] = [df[col].count(), round(df[col].nunique(), 2), str(df[col].dtype), round(df[col].isnull().sum(), 2), 'NA', 'NA', 'NA', 'NA', 'NA', 'NA', 'NA', 'NA', 'NA', 'NA']
-                text = 'Count: ' + str(df[col].count()) + '\n'
-                text += 'Unique: ' + str(round(df[col].nunique(), 2)) + '\n'
-                text += 'Data Type: ' + str(df[col].dtype) + '\n'
-                text += 'Missing: ' + str(round(df[col].isna().sum(), 2)) + '\n'
-                ax_count.text(.9, .5, text, fontsize=10, transform=plt.gcf().transFigure)
-                plt.show()
-        return new_df
-
-    def bivariate_viz(self, data, feature, label):
+    def bivariate_viz(self, data, feature, label, ax=None):
         import pandas as pd
         import seaborn as sns
         import matplotlib.pyplot as plt
@@ -141,24 +91,30 @@ class EDA:
         label_is_numeric = pd.api.types.is_numeric_dtype(df[label])
         feature_is_numeric = pd.api.types.is_numeric_dtype(df[feature])
         if label_is_numeric and feature_is_numeric:
-            plt.figure(figsize=(10, 6))
-            sns.scatterplot(data=df, x=feature, y=label)
-            plt.title(f'Scatter plot of {feature} vs {label}')
+            if ax is None:
+                plt.title(f'Scatter plot of {feature} vs {label}', fontsize=16, fontweight='bold')
+            else:
+                ax.set_title(f'Scatter plot of {feature} vs {label}', fontsize=16, fontweight='bold')
             plt.xlabel(feature)
             plt.ylabel(label)
-            plt.show()
+            sns.scatterplot(data=df, x=feature, y=label, ax=ax)
+            if ax is None:
+                plt.show()
+
         elif label_is_numeric and not feature_is_numeric:
             num_groups = df[feature].nunique()
             if num_groups <= 15:
                 ordered_df = df.groupby(feature)[label].mean().reset_index()
                 ordered_df.sort_values(by=label, ascending=False, inplace=True)
-                plt.figure(figsize=(10, 6))
-                sns.barplot(data=ordered_df, x=feature, y=label, hue=label)
-                plt.title(f'Bar plot of {feature} vs Average {label}')
-                plt.xticks(rotation=45)
+                if ax is None:
+                    plt.title(f'Bar plot of {feature} vs average {label}', fontsize=16, fontweight='bold')
+                else:
+                    ax.set_title(f'Bar plot of {feature} vs average {label}', fontsize=16, fontweight='bold')
                 plt.xlabel(feature)
                 plt.ylabel(label)
-                plt.show()
+                sns.barplot(data=ordered_df, x=feature, y=label, hue=label, ax=ax)
+                if ax is None:
+                    plt.show()
             else:
                 print(f'Cardinality of {feature} is too high for bar plot.')
         elif not label_is_numeric and feature_is_numeric:
@@ -166,20 +122,105 @@ class EDA:
             if num_groups <= 15:
                 ordered_df = df.groupby(label)[feature].mean().reset_index()
                 ordered_df.sort_values(by=feature, ascending=False, inplace=True)
-                plt.figure(figsize=(10, 6))
-                sns.barplot(data=ordered_df, x=label, y=feature, hue=label)
-                plt.title(f'Bar plot of {label} vs Average {feature}')
-                plt.xticks(rotation=45)
+                if ax is None:
+                    plt.title(f'Bar plot of {label} vs average {feature}', fontsize=16, fontweight='bold')
+                else:
+                    ax.set_title(f'Bar plot of {label} vs average {feature}', fontsize=16, fontweight='bold')
                 plt.xlabel(label)
                 plt.ylabel(feature)
-                plt.show()
+                sns.barplot(data=ordered_df, x=label, y=feature, hue=feature, ax=ax)
+                if ax is None:
+                    plt.show()
             else:
                 print(f'Cardinality of {label} is too high for bar plot.')
         else:
-            plt.figure(figsize=(10, 6))
-            sns.countplot(data=df, x=feature, hue=label)
-            plt.title(f'Count plot of {feature} vs {label}')
+            if ax is None:
+                plt.title(f'Count plot of {feature} vs {label}', fontsize=16, fontweight='bold')
+            else:
+                ax.set_title(f'Count plot of {feature} vs {label}', fontsize=16, fontweight='bold')
             plt.xlabel(feature)
             plt.ylabel('Count')
             plt.legend(title=label)
+            sns.countplot(data=df, x=feature, hue=label, ax=ax)
+            if ax is None:
+                plt.show()
+
+    def univariate_stats(self, df):
+        import pandas as pd
+        new_df = pd.DataFrame(columns=['Count', 'Unique', 'Data Type', 'Missing', 'Mode', 'Min', '25%', 'Median', '75%', 'Max', 'STD Dev', 'Mean', 'Skew', 'Kurt'])
+        for col in df:
+            if pd.api.types.is_numeric_dtype(df[col]):
+                new_df.loc[col] = [df[col].count(), 
+                                round(df[col].nunique(), 2), 
+                                str(df[col].dtype), 
+                                round(df[col].isnull().sum(), 2), 
+                                df[col].mode().values[0], 
+                                round(df[col].min(), 2), 
+                                round(df[col].quantile(.25), 2), 
+                                round(df[col].median(), 2), 
+                                round(df[col].quantile(.75), 2), 
+                                round(df[col].max(), 2), 
+                                round(df[col].std(), 2), 
+                                round(df[col].mean(), 2), 
+                                round(df[col].skew(), 2), 
+                                round(df[col].kurt(), 2)]
+            else:
+                new_df.loc[col] = [df[col].count(), 
+                                round(df[col].nunique(), 2), 
+                                str(df[col].dtype), 
+                                round(df[col].isnull().sum(), 2), 
+                                'NA', 'NA', 'NA', 'NA', 'NA', 'NA', 'NA', 'NA', 'NA', 'NA']
+        return new_df
+    
+    def univariate_viz(self, df, col, axi=None):
+        import pandas as pd
+        import seaborn as sns
+        import matplotlib.pyplot as plt
+        if axi is None:
+            fig, axi = plt.subplots(figsize=(10, 6))
+        if pd.api.types.is_numeric_dtype(df[col]):
+            sns.boxplot(x=df[col], ax=axi, color='white', width=0.5)
+            sns.histplot(df[col], kde=True, ax=axi.twinx(), color='blue', bins=30, alpha=0.6)
+            axi.set_title(col, fontsize=16, fontweight='bold')
+            axi.set_xlabel(col)
+            axi.set_ylabel('Count')
+        else:
+            sns.countplot(x=col, data=df, ax=axi, order=df[col].value_counts().index, palette='viridis')
+            axi.set_title(col, fontsize=16, fontweight='bold')
+            axi.set_xlabel(col)
+            axi.set_ylabel('Count')
+            axi.set_xticklabels(axi.get_xticklabels())
+        if axi is None:
+            plt.tight_layout()
             plt.show()
+
+    def uni_viz_all(self, df):
+        import matplotlib.pyplot as plt
+        import math
+        num_features = len(df.columns)
+        cols = 3
+        rows = math.ceil(num_features / cols)
+        fig, axes = plt.subplots(rows, cols, figsize=(10 * cols, 6 * rows))
+        axes = axes.flatten()
+        for i, col in enumerate(df.columns):
+            self.univariate_viz(df, col, axi=axes[i])
+        for j in range(i + 1, len(axes)):
+            axes[j].axis("off")
+        plt.tight_layout()
+        plt.show()
+
+    def biv_viz_all(self, df, label):
+        import matplotlib.pyplot as plt
+        import math
+        num_features = len(df.columns) - 1
+        cols = 3
+        rows = math.ceil(num_features / cols) 
+        fig, axes = plt.subplots(rows, cols, figsize=(10 * cols, 6 * rows))
+        axes = axes.flatten()
+        for i, col in enumerate(df.columns):
+            if col != label:
+                self.bivariate_viz(df, col, label, ax=axes[i])
+        for j in range(i + 1, len(axes)):
+            axes[j].axis("off")
+        plt.tight_layout()
+        plt.show()
