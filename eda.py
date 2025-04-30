@@ -2,12 +2,17 @@ import pandas as pd
 import numpy as np
 
 class EDA:
-    def __init__(self, df, label, label_is_numeric=True):
-        self.label_is_numeric = label_is_numeric
-        self.label = label
+    def __init__(self, df=None, label=None):
         self.df = df
-        self.numeric_cols = self.df.drop(self.label, axis=1).select_dtypes(include=[np.number]).columns
-        self.categorical_cols = self.df.drop(self.label, axis=1).select_dtypes(exclude=[np.number]).columns
+        self.label = label
+        self.label_is_numeric = pd.api.types.is_numeric_dtype(df[label]) if label is not None else False
+
+    def set_df(self, df):
+        self.df = df
+
+    def set_label(self, label, is_numeric=False):
+        self.label = label
+        self.label_is_numeric = is_numeric
 
     def _cramer_v(self, chi2_stat, n, r, k):
         return np.sqrt(chi2_stat / (n * (min(r,k)) - 1))
@@ -31,8 +36,6 @@ class EDA:
 
     def bivariate_stats(self):
         from scipy import stats
-        import pandas as pd
-        import numpy as np
         from scipy.stats import chi2_contingency
         final_data = []
         df = self.df.copy()
@@ -133,20 +136,19 @@ class EDA:
         return final_data
 
     def bivariate_viz(self, feature, ax=None):
-        import pandas as pd
         import seaborn as sns
         import matplotlib.pyplot as plt
         df = self.df.copy()
         feature_is_numeric = pd.api.types.is_numeric_dtype(df[feature])
         if self.label_is_numeric and feature_is_numeric:
             if ax is None:
-                plt.title(f'Scatter plot of {feature} vs {self.label}', fontsize=16, fontweight='bold')
-            else:
-                ax.set_title(f'Scatter plot of {feature} vs {self.label}', fontsize=16, fontweight='bold')
-            plt.xlabel(feature)
-            plt.ylabel(self.label)
-            sns.scatterplot(data=df, x=feature, y=self.label, ax=ax)
+                fig, ax = plt.subplots(figsize=(10, 6))
+            sns.scatterplot(data=df, x=feature, y=self.label, ax=ax, color='blue', alpha=0.7)
+            ax.set_title(f'Scatter plot of {feature} vs {self.label}', fontsize=16, fontweight='bold')
+            ax.set_xlabel(feature, fontsize=14)
+            ax.set_ylabel(self.label, fontsize=14)
             if ax is None:
+                plt.tight_layout()
                 plt.show()
 
         elif self.label_is_numeric and not feature_is_numeric:
@@ -155,13 +157,13 @@ class EDA:
                 ordered_df = df.groupby(feature)[self.label].mean().reset_index()
                 ordered_df.sort_values(by=self.label, ascending=False, inplace=True)
                 if ax is None:
-                    plt.title(f'Bar plot of {feature} vs average {self.label}', fontsize=16, fontweight='bold')
-                else:
-                    ax.set_title(f'Bar plot of {feature} vs average {self.label}', fontsize=16, fontweight='bold')
-                plt.xlabel(feature)
-                plt.ylabel(self.label)
-                sns.barplot(data=ordered_df, x=feature, y=self.label, hue=self.label, ax=ax)
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                sns.barplot(data=ordered_df, x=feature, y=self.label, ax=ax, palette='viridis')
+                ax.set_title(f'Bar plot of {feature} vs average {self.label}', fontsize=16, fontweight='bold')
+                ax.set_xlabel(feature, fontsize=14)
+                ax.set_ylabel(self.label, fontsize=14)
                 if ax is None:
+                    plt.tight_layout()
                     plt.show()
             else:
                 print(f'Cardinality of {feature} is too high for bar plot.')
@@ -171,30 +173,29 @@ class EDA:
                 ordered_df = df.groupby(self.label)[feature].mean().reset_index()
                 ordered_df.sort_values(by=feature, ascending=False, inplace=True)
                 if ax is None:
-                    plt.title(f'Bar plot of {self.label} vs average {feature}', fontsize=16, fontweight='bold')
-                else:
-                    ax.set_title(f'Bar plot of {self.label} vs average {feature}', fontsize=16, fontweight='bold')
-                plt.xlabel(self.label)
-                plt.ylabel(feature)
-                sns.barplot(data=ordered_df, x=self.label, y=feature, hue=feature, ax=ax)
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                sns.barplot(data=ordered_df, x=self.label, y=feature, ax=ax, palette='viridis')
+                ax.set_title(f'Bar plot of {self.label} vs average {feature}', fontsize=16, fontweight='bold')
+                ax.set_xlabel(self.label, fontsize=14)
+                ax.set_ylabel(feature, fontsize=14)
                 if ax is None:
+                    plt.tight_layout()
                     plt.show()
             else:
                 print(f'Cardinality of {self.label} is too high for bar plot.')
         else:
             if ax is None:
-                plt.title(f'Count plot of {feature} vs {self.label}', fontsize=16, fontweight='bold')
-            else:
-                ax.set_title(f'Count plot of {feature} vs {self.label}', fontsize=16, fontweight='bold')
-            plt.xlabel(feature)
-            plt.ylabel('Count')
-            plt.legend(title=self.label)
-            sns.countplot(data=df, x=feature, hue=self.label, ax=ax)
+                fig, ax = plt.subplots(figsize=(10, 6))
+            sns.countplot(data=df, x=feature, hue=self.label, ax=ax, palette='viridis')
+            ax.set_title(f'Count plot of {feature} vs {self.label}', fontsize=16, fontweight='bold')
+            ax.set_xlabel(feature, fontsize=14)
+            ax.set_ylabel('Count', fontsize=14)
+            ax.legend(title=self.label)
             if ax is None:
+                plt.tight_layout()
                 plt.show()
 
     def univariate_stats(self):
-        import pandas as pd
         df = self.df.copy()
         new_df = pd.DataFrame(columns=['Count', 'Unique', 'Data Type', 'Missing', 'Mode', 'Min', '25%', 'Median', '75%', 'Max', 'STD Dev', 'Mean', 'Skew', 'Kurt'])
         for col in df:
@@ -222,7 +223,6 @@ class EDA:
         return new_df
     
     def univariate_viz(self, col, axi=None):
-        import pandas as pd
         import seaborn as sns
         import matplotlib.pyplot as plt
         df = self.df.copy()
